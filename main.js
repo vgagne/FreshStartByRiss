@@ -66,6 +66,98 @@ form.addEventListener('submit', e => {
   }, 4000);
 });
 
+// Testimonials Carousel
+(function () {
+  const track = document.getElementById('testimonialsTrack');
+  if (!track) return;
+
+  const pauseBtn = document.getElementById('carouselPause');
+  const prevBtn  = document.getElementById('carouselPrev');
+  const nextBtn  = document.getElementById('carouselNext');
+  const carousel = document.getElementById('testimonialsCarousel');
+
+  const SPEED = 0.55; // px per animation frame — slow drift
+  const GAP   = 24;
+
+  let offset        = 0;
+  let manualPaused  = false;
+  let hovering      = false;
+  let transitioning = false;
+  let totalWidth    = 0;
+
+  // Duplicate all cards so the loop is seamless
+  const origCards = [...track.children];
+  origCards.forEach(c => track.appendChild(c.cloneNode(true)));
+
+  function measure() {
+    const card = track.querySelector('.testimonial-card');
+    totalWidth = origCards.length * (card.offsetWidth + GAP);
+  }
+
+  function isRunning() { return !manualPaused && !hovering; }
+
+  function tick() {
+    if (isRunning() && !transitioning) {
+      offset += SPEED;
+      if (offset >= totalWidth) offset -= totalWidth;
+      track.style.transform = `translateX(-${offset}px)`;
+    }
+    requestAnimationFrame(tick);
+  }
+
+  function slideTo(target) {
+    if (target < 0) target += totalWidth;
+    if (target >= totalWidth) target -= totalWidth;
+    transitioning = true;
+    track.style.transition = 'transform 0.45s ease';
+    offset = target;
+    track.style.transform = `translateX(-${offset}px)`;
+    setTimeout(() => {
+      track.style.transition = '';
+      transitioning = false;
+    }, 450);
+  }
+
+  function stepBy(dir) {
+    measure();
+    const cardW = track.querySelector('.testimonial-card').offsetWidth + GAP;
+    slideTo(offset + dir * cardW);
+  }
+
+  function updatePauseBtn() {
+    if (manualPaused) {
+      pauseBtn.innerHTML = '&#9654;';
+      pauseBtn.setAttribute('aria-label', 'Resume carousel');
+    } else {
+      pauseBtn.innerHTML = '&#10074;&#10074;';
+      pauseBtn.setAttribute('aria-label', 'Pause carousel');
+    }
+  }
+
+  pauseBtn.addEventListener('click', () => {
+    manualPaused = !manualPaused;
+    updatePauseBtn();
+  });
+  prevBtn.addEventListener('click', () => {
+    manualPaused = true;
+    updatePauseBtn();
+    stepBy(-1);
+  });
+  nextBtn.addEventListener('click', () => {
+    manualPaused = true;
+    updatePauseBtn();
+    stepBy(1);
+  });
+
+  carousel.addEventListener('mouseenter', () => { hovering = true; });
+  carousel.addEventListener('mouseleave', () => { hovering = false; });
+
+  window.addEventListener('load', () => {
+    measure();
+    requestAnimationFrame(tick);
+  });
+}());
+
 // Active nav link highlight on scroll
 const sections = document.querySelectorAll('section[id], .contact-section[id]');
 const navAnchs = document.querySelectorAll('.nav-links a[href^="#"]');
