@@ -582,7 +582,7 @@ p { color: var(--mid-gray); }
   content: '';
   position: absolute;
   top: 0; bottom: 0; right: 0;
-  width: 80px;
+  width: 48px;
   background: linear-gradient(to left, var(--cream) 0%, transparent 100%);
   z-index: 2;
   pointer-events: none;
@@ -600,13 +600,15 @@ p { color: var(--mid-gray); }
   gap: 24px;
   will-change: transform;
   cursor: grab;
-  /*
-   * Left padding aligns the first card with the container's content edge.
-   * max() picks the larger of 24 px (mobile) or the calculated container margin + padding.
-   * On a 1400px viewport with max-width 1160px: (1400-1160)/2 + 24 = 144px.
-   */
-  padding-left: max(24px, calc((100vw - 1160px) / 2 + 24px));
+  padding-left: 24px;
   padding-right: 24px;
+}
+
+/* On wide viewports align the first card with the container's left content edge */
+@media (min-width: 1210px) {
+  .testimonials-track {
+    padding-left: calc((100vw - 1160px) / 2 + 24px);
+  }
 }
 
 .testimonials-track:active { cursor: grabbing; }
@@ -620,7 +622,8 @@ p { color: var(--mid-gray); }
   flex-direction: column;
   gap: 16px;
   transition: transform var(--transition);
-  flex: 0 0 clamp(260px, 78vw, 300px);
+  /* On narrow mobile show nearly one card at a time; cap at 300px on desktop */
+  flex: 0 0 min(300px, calc(100vw - 64px));
 }
 
 .testimonial-card:hover { transform: translateY(-4px); }

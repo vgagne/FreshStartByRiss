@@ -154,17 +154,28 @@ form.addEventListener('submit', e => {
     if (setW > 0 && offset >= setW) offset = offset % setW;
   });
 
+  var started = false;
+
   function init() {
+    if (started) return;
     measure();
-    if (setW === 0) { requestAnimationFrame(init); return; } // retry until layout settles
+    if (setW === 0) {
+      // Cards not laid out yet — keep retrying every 50 ms (up to 2 s)
+      setTimeout(init, 50);
+      return;
+    }
+    started = true;
     offset = 0;
     track.style.transition = 'none';
     track.style.transform  = 'translateX(0)';
     requestAnimationFrame(tick);
   }
 
-  // Double rAF: first frame triggers layout, second frame reads correct offsetWidth
-  window.addEventListener('load', () => requestAnimationFrame(() => requestAnimationFrame(init)));
+  // The script sits at the end of <body> so the DOM is already parsed.
+  // Two rAF calls let the browser finish painting before we measure widths.
+  requestAnimationFrame(function () {
+    requestAnimationFrame(init);
+  });
 }());
 
 // Active nav link highlight on scroll
