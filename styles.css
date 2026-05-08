@@ -562,13 +562,56 @@ p { color: var(--mid-gray); }
    TESTIMONIALS
    =========================== */
 
-.testimonials-section { background: var(--cream); }
-
-.testimonials-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-  gap: 24px;
+.testimonials-section {
+  background: var(--cream);
+  /* section padding comes from .section (96px 0) — reduce bottom slightly */
+  padding-bottom: 80px;
 }
+
+/* Header stays contained; carousel breaks out to full page width */
+.testimonials-section > .container {
+  padding-bottom: 0;
+}
+
+.testimonials-carousel {
+  position: relative;
+  width: 100%;
+  /* Right fade only — no left fade so the first card is never obscured */
+}
+.testimonials-carousel::after {
+  content: '';
+  position: absolute;
+  top: 0; bottom: 0; right: 0;
+  width: 48px;
+  background: linear-gradient(to left, var(--cream) 0%, transparent 100%);
+  z-index: 2;
+  pointer-events: none;
+}
+
+/* overflow:hidden on viewport — vertical padding gives box-shadows room */
+.carousel-viewport {
+  overflow: hidden;
+  padding: 12px 0;
+  margin: -12px 0;
+}
+
+.testimonials-track {
+  display: flex;
+  gap: 24px;
+  will-change: transform;
+  cursor: grab;
+  padding-left: 24px;
+  padding-right: 24px;
+}
+
+/* On wide viewports align the first card with the container's left content edge */
+@media (min-width: 1210px) {
+  .testimonials-track {
+    padding-left: calc((100vw - 1160px) / 2 + 24px);
+  }
+}
+
+.testimonials-track:active { cursor: grabbing; }
 
 .testimonial-card {
   background: #fff;
@@ -579,18 +622,50 @@ p { color: var(--mid-gray); }
   flex-direction: column;
   gap: 16px;
   transition: transform var(--transition);
+  /* On narrow mobile show nearly one card at a time; cap at 300px on desktop */
+  flex: 0 0 min(300px, calc(100vw - 64px));
 }
 
 .testimonial-card:hover { transform: translateY(-4px); }
 
-.testimonial-card--featured {
+.carousel-controls {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 12px;
+  margin-top: 36px;
+  position: relative;
+  z-index: 3;
+}
+
+.carousel-btn {
+  background: #fff;
+  border: 2px solid var(--sage);
+  color: var(--sage);
+  border-radius: 50%;
+  width: 44px;
+  height: 44px;
+  font-size: 1.1rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background var(--transition), color var(--transition);
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.carousel-btn:hover {
   background: var(--sage);
   color: #fff;
 }
-.testimonial-card--featured p { color: rgba(255,255,255,0.92); }
-.testimonial-card--featured .stars { color: #ffd700; }
-.testimonial-card--featured strong { color: #fff; }
-.testimonial-card--featured span { color: rgba(255,255,255,0.7); }
+
+.carousel-btn--pause {
+  width: 52px;
+  height: 52px;
+  font-size: 0.75rem;
+  letter-spacing: 1px;
+}
 
 .stars {
   color: #f5a623;
@@ -870,7 +945,6 @@ textarea { resize: vertical; }
   .hero-btns { flex-direction: column; align-items: center; }
 
   .services-grid { grid-template-columns: 1fr; }
-  .testimonials-grid { grid-template-columns: 1fr; }
 
   .form-row { grid-template-columns: 1fr; }
 
