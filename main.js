@@ -68,94 +68,108 @@ form.addEventListener('submit', e => {
 
 // Testimonials Carousel
 (function () {
-  const track = document.getElementById('testimonialsTrack');
+  const track    = document.getElementById('testimonialsTrack');
   if (!track) return;
-
   const pauseBtn = document.getElementById('carouselPause');
   const prevBtn  = document.getElementById('carouselPrev');
   const nextBtn  = document.getElementById('carouselNext');
   const carousel = document.getElementById('testimonialsCarousel');
 
-  const SPEED = 0.55; // px per animation frame — slow drift
+  const SPEED = 0.55; // px per rAF tick — slow drift
   const GAP   = 24;
 
-  let offset        = 0;
-  let manualPaused  = false;
-  let hovering      = false;
-  let transitioning = false;
-  let totalWidth    = 0;
+  // Capture originals before cloning
+  const origCards = Array.from(track.children);
+  const N = origCards.length;
 
-  // Duplicate all cards so the loop is seamless
-  const origCards = [...track.children];
+  // Build triple set: [pre-clones][originals][post-clones]
+  // Pre-clones go BEFORE the originals so prev can scroll back seamlessly
+  const pre = document.createDocumentFragment();
+  origCards.forEach(c => pre.appendChild(c.cloneNode(true)));
+  track.insertBefore(pre, track.firstChild);
+  // Post-clones go AFTER the originals so forward scrolling loops
   origCards.forEach(c => track.appendChild(c.cloneNode(true)));
+
+  let setW         = 0;  // pixel width of one full set (N cards + gaps)
+  let offset       = 0;  // current translateX magnitude
+  let manualPaused = false;
+  let hovering     = false;
+  let inView       = false;
+  let transitioning = false;
+  let rafId;
 
   function measure() {
     const card = track.querySelector('.testimonial-card');
-    totalWidth = origCards.length * (card.offsetWidth + GAP);
+    if (!card) return;
+    setW = N * (card.offsetWidth + GAP);
   }
 
-  function isRunning() { return !manualPaused && !hovering; }
+  // Keep offset inside [setW, 2*setW) without animation — visually identical
+  function normalize() {
+    track.style.transition = 'none';
+    if (offset < setW)       offset += setW;
+    if (offset >= 2 * setW)  offset -= setW;
+    track.style.transform = `translateX(-${offset}px)`;
+    // Force reflow so the next animated transform won't inherit the jump
+    track.getBoundingClientRect();
+  }
+
+  function isRunning() { return inView && !manualPaused && !hovering && !transitioning; }
 
   function tick() {
-    if (isRunning() && !transitioning) {
+    if (isRunning()) {
       offset += SPEED;
-      if (offset >= totalWidth) offset -= totalWidth;
+      if (offset >= 2 * setW) offset -= setW; // seamless right-to-left loop
       track.style.transform = `translateX(-${offset}px)`;
     }
-    requestAnimationFrame(tick);
-  }
-
-  function slideTo(target) {
-    if (target < 0) target += totalWidth;
-    if (target >= totalWidth) target -= totalWidth;
-    transitioning = true;
-    track.style.transition = 'transform 0.45s ease';
-    offset = target;
-    track.style.transform = `translateX(-${offset}px)`;
-    setTimeout(() => {
-      track.style.transition = '';
-      transitioning = false;
-    }, 450);
+    rafId = requestAnimationFrame(tick);
   }
 
   function stepBy(dir) {
-    measure();
-    const cardW = track.querySelector('.testimonial-card').offsetWidth + GAP;
-    slideTo(offset + dir * cardW);
+    if (setW === 0 || transitioning) return;
+    const cardW = setW / N; // width of one card slot (card + gap)
+    transitioning = true;
+    offset += dir * cardW;
+    track.style.transition = 'transform 0.45s ease';
+    track.style.transform   = `translateX(-${offset}px)`;
+    setTimeout(() => {
+      transitioning = false;
+      normalize(); // silently reposition within the safe zone
+    }, 460);
   }
 
   function updatePauseBtn() {
-    if (manualPaused) {
-      pauseBtn.innerHTML = '&#9654;';
-      pauseBtn.setAttribute('aria-label', 'Resume carousel');
-    } else {
-      pauseBtn.innerHTML = '&#10074;&#10074;';
-      pauseBtn.setAttribute('aria-label', 'Pause carousel');
-    }
+    pauseBtn.innerHTML = manualPaused ? '&#9654;' : '&#10074;&#10074;';
+    pauseBtn.setAttribute('aria-label', manualPaused ? 'Resume carousel' : 'Pause carousel');
   }
 
-  pauseBtn.addEventListener('click', () => {
-    manualPaused = !manualPaused;
-    updatePauseBtn();
-  });
-  prevBtn.addEventListener('click', () => {
-    manualPaused = true;
-    updatePauseBtn();
-    stepBy(-1);
-  });
-  nextBtn.addEventListener('click', () => {
-    manualPaused = true;
-    updatePauseBtn();
-    stepBy(1);
-  });
+  pauseBtn.addEventListener('click', () => { manualPaused = !manualPaused; updatePauseBtn(); });
+  prevBtn.addEventListener('click',  () => { manualPaused = true; updatePauseBtn(); stepBy(-1); });
+  nextBtn.addEventListener('click',  () => { manualPaused = true; updatePauseBtn(); stepBy(1);  });
 
-  carousel.addEventListener('mouseenter', () => { hovering = true; });
+  // Pause on hover (desktop)
+  carousel.addEventListener('mouseenter', () => { hovering = true;  });
   carousel.addEventListener('mouseleave', () => { hovering = false; });
 
-  window.addEventListener('load', () => {
+  // Only auto-scroll when the section is actually visible
+  const sectionObserver = new IntersectionObserver(
+    entries => { inView = entries[0].isIntersecting; },
+    { threshold: 0.1 }
+  );
+  sectionObserver.observe(document.getElementById('testimonials'));
+
+  function init() {
     measure();
+    if (setW === 0) { requestAnimationFrame(init); return; } // retry until layout settles
+    offset = setW; // start at beginning of originals
+    track.style.transition = 'none';
+    track.style.transform  = `translateX(-${offset}px)`;
     requestAnimationFrame(tick);
-  });
+  }
+
+  window.addEventListener('resize', measure);
+  // Double rAF ensures the browser has completed layout before we measure
+  window.addEventListener('load', () => requestAnimationFrame(() => requestAnimationFrame(init)));
 }());
 
 // Active nav link highlight on scroll

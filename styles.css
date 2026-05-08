@@ -564,12 +564,34 @@ p { color: var(--mid-gray); }
 
 .testimonials-section { background: var(--cream); }
 
-/* Carousel wrapper */
-.testimonials-carousel { position: relative; }
+.testimonials-carousel {
+  position: relative;
+}
 
+/* Fade edges so cards blend in/out gracefully */
+.testimonials-carousel::before,
+.testimonials-carousel::after {
+  content: '';
+  position: absolute;
+  top: 0; bottom: 0;
+  width: 48px;
+  z-index: 2;
+  pointer-events: none;
+}
+.testimonials-carousel::before {
+  left: 0;
+  background: linear-gradient(to right, var(--cream) 0%, transparent 100%);
+}
+.testimonials-carousel::after {
+  right: 0;
+  background: linear-gradient(to left, var(--cream) 0%, transparent 100%);
+}
+
+/* Clip scroll overflow on a wrapper so card shadows breathe */
 .carousel-viewport {
   overflow: hidden;
-  width: 100%;
+  padding: 10px 0;
+  margin: -10px 0;
 }
 
 .testimonials-track {
@@ -590,7 +612,8 @@ p { color: var(--mid-gray); }
   flex-direction: column;
   gap: 16px;
   transition: transform var(--transition);
-  flex: 0 0 300px;
+  /* Responsive width: full card on desktop, nearly full-screen on mobile */
+  flex: 0 0 clamp(260px, 80vw, 300px);
 }
 
 .testimonial-card:hover { transform: translateY(-4px); }
@@ -601,6 +624,8 @@ p { color: var(--mid-gray); }
   align-items: center;
   gap: 12px;
   margin-top: 32px;
+  position: relative;
+  z-index: 3;
 }
 
 .carousel-btn {
@@ -631,15 +656,6 @@ p { color: var(--mid-gray); }
   font-size: 0.75rem;
   letter-spacing: 1px;
 }
-
-.testimonial-card--featured {
-  background: var(--sage);
-  color: #fff;
-}
-.testimonial-card--featured p { color: rgba(255,255,255,0.92); }
-.testimonial-card--featured .stars { color: #ffd700; }
-.testimonial-card--featured strong { color: #fff; }
-.testimonial-card--featured span { color: rgba(255,255,255,0.7); }
 
 .stars {
   color: #f5a623;
@@ -919,7 +935,6 @@ textarea { resize: vertical; }
   .hero-btns { flex-direction: column; align-items: center; }
 
   .services-grid { grid-template-columns: 1fr; }
-  .testimonials-grid { grid-template-columns: 1fr; }
 
   .form-row { grid-template-columns: 1fr; }
 
