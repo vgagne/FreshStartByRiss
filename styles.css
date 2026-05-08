@@ -562,36 +562,37 @@ p { color: var(--mid-gray); }
    TESTIMONIALS
    =========================== */
 
-.testimonials-section { background: var(--cream); }
+.testimonials-section {
+  background: var(--cream);
+  /* section padding comes from .section (96px 0) — reduce bottom slightly */
+  padding-bottom: 80px;
+}
+
+/* Header stays contained; carousel breaks out to full page width */
+.testimonials-section > .container {
+  padding-bottom: 0;
+}
 
 .testimonials-carousel {
   position: relative;
+  width: 100%;
+  /* Right fade only — no left fade so the first card is never obscured */
 }
-
-/* Fade edges so cards blend in/out gracefully */
-.testimonials-carousel::before,
 .testimonials-carousel::after {
   content: '';
   position: absolute;
-  top: 0; bottom: 0;
-  width: 48px;
+  top: 0; bottom: 0; right: 0;
+  width: 80px;
+  background: linear-gradient(to left, var(--cream) 0%, transparent 100%);
   z-index: 2;
   pointer-events: none;
 }
-.testimonials-carousel::before {
-  left: 0;
-  background: linear-gradient(to right, var(--cream) 0%, transparent 100%);
-}
-.testimonials-carousel::after {
-  right: 0;
-  background: linear-gradient(to left, var(--cream) 0%, transparent 100%);
-}
 
-/* Clip scroll overflow on a wrapper so card shadows breathe */
+/* overflow:hidden on viewport — vertical padding gives box-shadows room */
 .carousel-viewport {
   overflow: hidden;
-  padding: 10px 0;
-  margin: -10px 0;
+  padding: 12px 0;
+  margin: -12px 0;
 }
 
 .testimonials-track {
@@ -599,6 +600,13 @@ p { color: var(--mid-gray); }
   gap: 24px;
   will-change: transform;
   cursor: grab;
+  /*
+   * Left padding aligns the first card with the container's content edge.
+   * max() picks the larger of 24 px (mobile) or the calculated container margin + padding.
+   * On a 1400px viewport with max-width 1160px: (1400-1160)/2 + 24 = 144px.
+   */
+  padding-left: max(24px, calc((100vw - 1160px) / 2 + 24px));
+  padding-right: 24px;
 }
 
 .testimonials-track:active { cursor: grabbing; }
@@ -612,8 +620,7 @@ p { color: var(--mid-gray); }
   flex-direction: column;
   gap: 16px;
   transition: transform var(--transition);
-  /* Responsive width: full card on desktop, nearly full-screen on mobile */
-  flex: 0 0 clamp(260px, 80vw, 300px);
+  flex: 0 0 clamp(260px, 78vw, 300px);
 }
 
 .testimonial-card:hover { transform: translateY(-4px); }
@@ -623,7 +630,7 @@ p { color: var(--mid-gray); }
   justify-content: center;
   align-items: center;
   gap: 12px;
-  margin-top: 32px;
+  margin-top: 36px;
   position: relative;
   z-index: 3;
 }

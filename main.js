@@ -75,66 +75,66 @@ form.addEventListener('submit', e => {
   const nextBtn  = document.getElementById('carouselNext');
   const carousel = document.getElementById('testimonialsCarousel');
 
-  const SPEED = 0.55; // px per rAF tick — slow drift
-  const GAP   = 24;
+  const SPEED = 0.55; // px per rAF tick
 
-  // Capture originals before cloning
+  // 2-set layout: [originals 1-9][clones 1-9]
+  // When offset reaches setW, we instantly reset to 0 — both views are identical.
   const origCards = Array.from(track.children);
   const N = origCards.length;
-
-  // Build triple set: [pre-clones][originals][post-clones]
-  // Pre-clones go BEFORE the originals so prev can scroll back seamlessly
-  const pre = document.createDocumentFragment();
-  origCards.forEach(c => pre.appendChild(c.cloneNode(true)));
-  track.insertBefore(pre, track.firstChild);
-  // Post-clones go AFTER the originals so forward scrolling loops
   origCards.forEach(c => track.appendChild(c.cloneNode(true)));
 
-  let setW         = 0;  // pixel width of one full set (N cards + gaps)
-  let offset       = 0;  // current translateX magnitude
+  let setW         = 0;   // pixel width of one full set of N cards
+  let offset       = 0;   // current scroll position (translateX magnitude)
   let manualPaused = false;
   let hovering     = false;
-  let inView       = false;
   let transitioning = false;
-  let rafId;
 
   function measure() {
     const card = track.querySelector('.testimonial-card');
-    if (!card) return;
-    setW = N * (card.offsetWidth + GAP);
+    if (!card || !card.offsetWidth) return;
+    // Each slot = card width + gap between cards
+    setW = N * (card.offsetWidth + 24);
   }
 
-  // Keep offset inside [setW, 2*setW) without animation — visually identical
-  function normalize() {
-    track.style.transition = 'none';
-    if (offset < setW)       offset += setW;
-    if (offset >= 2 * setW)  offset -= setW;
-    track.style.transform = `translateX(-${offset}px)`;
-    // Force reflow so the next animated transform won't inherit the jump
-    track.getBoundingClientRect();
-  }
-
-  function isRunning() { return inView && !manualPaused && !hovering && !transitioning; }
-
+  // Auto-scroll tick: move right-to-left, loop when originals are exhausted
   function tick() {
-    if (isRunning()) {
+    if (!manualPaused && !hovering && !transitioning && setW > 0) {
       offset += SPEED;
-      if (offset >= 2 * setW) offset -= setW; // seamless right-to-left loop
+      if (offset >= setW) {
+        // Instant (no-transition) reset to the equivalent position in the originals
+        offset -= setW;
+        track.style.transition = 'none';
+      }
       track.style.transform = `translateX(-${offset}px)`;
     }
-    rafId = requestAnimationFrame(tick);
+    requestAnimationFrame(tick);
   }
+
+  function cardSlotWidth() { return setW / N; }
 
   function stepBy(dir) {
     if (setW === 0 || transitioning) return;
-    const cardW = setW / N; // width of one card slot (card + gap)
+    const step = cardSlotWidth();
+
+    if (dir === -1 && offset < step) {
+      // Going backward past card 1 → jump silently to clone territory first,
+      // then animate back so card 9 (Michael T.) appears to the left.
+      track.style.transition = 'none';
+      offset += setW;
+      track.style.transform = `translateX(-${offset}px)`;
+      void track.offsetHeight; // flush reflow so next transition is clean
+    }
+
     transitioning = true;
-    offset += dir * cardW;
+    offset += dir * step;
     track.style.transition = 'transform 0.45s ease';
     track.style.transform   = `translateX(-${offset}px)`;
     setTimeout(() => {
+      track.style.transition = 'none';
+      // After going forward into clone territory, silently snap back to originals
+      if (offset >= setW) offset -= setW;
+      track.style.transform = `translateX(-${offset}px)`;
       transitioning = false;
-      normalize(); // silently reposition within the safe zone
     }, 460);
   }
 
@@ -146,29 +146,24 @@ form.addEventListener('submit', e => {
   pauseBtn.addEventListener('click', () => { manualPaused = !manualPaused; updatePauseBtn(); });
   prevBtn.addEventListener('click',  () => { manualPaused = true; updatePauseBtn(); stepBy(-1); });
   nextBtn.addEventListener('click',  () => { manualPaused = true; updatePauseBtn(); stepBy(1);  });
-
-  // Pause on hover (desktop)
   carousel.addEventListener('mouseenter', () => { hovering = true;  });
   carousel.addEventListener('mouseleave', () => { hovering = false; });
-
-  // Only auto-scroll when the section is actually visible
-  const sectionObserver = new IntersectionObserver(
-    entries => { inView = entries[0].isIntersecting; },
-    { threshold: 0.1 }
-  );
-  sectionObserver.observe(document.getElementById('testimonials'));
+  window.addEventListener('resize', () => {
+    measure();
+    // Clamp offset so it stays in-range after card width changes
+    if (setW > 0 && offset >= setW) offset = offset % setW;
+  });
 
   function init() {
     measure();
     if (setW === 0) { requestAnimationFrame(init); return; } // retry until layout settles
-    offset = setW; // start at beginning of originals
+    offset = 0;
     track.style.transition = 'none';
-    track.style.transform  = `translateX(-${offset}px)`;
+    track.style.transform  = 'translateX(0)';
     requestAnimationFrame(tick);
   }
 
-  window.addEventListener('resize', measure);
-  // Double rAF ensures the browser has completed layout before we measure
+  // Double rAF: first frame triggers layout, second frame reads correct offsetWidth
   window.addEventListener('load', () => requestAnimationFrame(() => requestAnimationFrame(init)));
 }());
 
